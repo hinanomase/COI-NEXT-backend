@@ -93,7 +93,6 @@ async def realtime_proxy(request: Request):
                     "instructions": system_prompt,
                     "voice": "shimmer",
                     "input_audio_transcription": {
-                        "model": "whisper-1",
                         "language": "ja"
                     },
                     "turn_detection": {
