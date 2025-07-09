@@ -92,10 +92,10 @@ async def realtime_proxy(request: Request):
                     "model": "gpt-4o-mini-realtime-preview-2024-12-17",
                     "instructions": system_prompt,
                     "voice": "shimmer",
-                    # "input_audio_transcription": {
-                    #     "model": "whisper-1",
-                    #     "language": "ja"
-                    # },
+                    "input_audio_transcription": {
+                        "model": "whisper-1",
+                        "language": "ja"
+                    },
                     "turn_detection": {
                         "type": "server_vad",
                         "create_response": True,
