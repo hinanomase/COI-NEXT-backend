@@ -92,10 +92,10 @@ async def realtime_proxy(request: Request):
                     "model": "gpt-4o-mini-realtime-preview-2024-12-17",
                     "instructions": system_prompt,
                     "voice": "shimmer",
-                    # "input_audio_transcription": {
-                    #     "model": "whisper-1",
-                    #     "language": "ja"
-                    # },
+                    "input_audio_transcription": {
+                        "model": "whisper-1",
+                        "language": "ja"
+                    },
                     "turn_detection": {
                         "type": "server_vad",
                         "create_response": True,
@@ -143,67 +143,67 @@ async def realtime_proxy(request: Request):
         raise HTTPException(status_code=500, detail="Error in /api/realtime-proxy")
     
     
-@app.post("/api/transcription-proxy")
-async def transcription_proxy(request: Request):
-    """
-    Whisper (文字起こし専用) セッションのOfferを受け取り、
-    OpenAI APIへ中継し、Answerを返す。
-    """
-    try:
-        offer_sdp = (await request.body()).decode("utf-8")
-        logging.info(f"Received Whisper Offer SDP (first 50 chars): {offer_sdp[:50]}...")
+# @app.post("/api/transcription-proxy")
+# async def transcription_proxy(request: Request):
+#     """
+#     Whisper (文字起こし専用) セッションのOfferを受け取り、
+#     OpenAI APIへ中継し、Answerを返す。
+#     """
+#     try:
+#         offer_sdp = (await request.body()).decode("utf-8")
+#         logging.info(f"Received Whisper Offer SDP (first 50 chars): {offer_sdp[:50]}...")
 
-        async with httpx.AsyncClient() as client:
-            # Whisperモデル専用のセッション生成
-            resp = await client.post(
-                "https://api.openai.com/v1/realtime/sessions",
-                headers={
-                    "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
-                    "OpenAI-Beta": "realtime=v1",
-                },
-                json={
-                    "input_audio_transcription": {
-                        "model": "whisper-1",
-                        "language": "ja"
-                    },
-                    "turn_detection": {
-                        "type": "server_vad",
-                        "create_response": False
-                    }
-                },
-                timeout=10
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            ephemeral_key = data.get("client_secret", {}).get("value")
+#         async with httpx.AsyncClient() as client:
+#             # Whisperモデル専用のセッション生成
+#             resp = await client.post(
+#                 "https://api.openai.com/v1/realtime/sessions",
+#                 headers={
+#                     "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
+#                     "OpenAI-Beta": "realtime=v1",
+#                 },
+#                 json={
+#                     "input_audio_transcription": {
+#                         "model": "whisper-1",
+#                         "language": "ja"
+#                     },
+#                     "turn_detection": {
+#                         "type": "server_vad",
+#                         "create_response": False
+#                     }
+#                 },
+#                 timeout=10
+#             )
+#             resp.raise_for_status()
+#             data = resp.json()
+#             ephemeral_key = data.get("client_secret", {}).get("value")
 
-            if not ephemeral_key:
-                raise HTTPException(status_code=500, detail="No ephemeral key in Whisper session response")
+#             if not ephemeral_key:
+#                 raise HTTPException(status_code=500, detail="No ephemeral key in Whisper session response")
 
-            logging.info("Whisper ephemeral key obtained.")
+#             logging.info("Whisper ephemeral key obtained.")
 
-            # SDP交換
-            sdp_resp = await client.post(
-                "https://api.openai.com/v1/realtime?model=whisper-1",
-                headers={
-                    "Authorization": f"Bearer {ephemeral_key}",
-                    "Content-Type": "application/sdp",
-                },
-                content=offer_sdp,
-                timeout=10
-            )
-            sdp_resp.raise_for_status()
+#             # SDP交換
+#             sdp_resp = await client.post(
+#                 "https://api.openai.com/v1/realtime?model=whisper-1",
+#                 headers={
+#                     "Authorization": f"Bearer {ephemeral_key}",
+#                     "Content-Type": "application/sdp",
+#                 },
+#                 content=offer_sdp,
+#                 timeout=10
+#             )
+#             sdp_resp.raise_for_status()
 
-            answer_sdp = sdp_resp.text
-            logging.info("Whisper SDP answer sent back to client.")
-            return PlainTextResponse(content=answer_sdp)
+#             answer_sdp = sdp_resp.text
+#             logging.info("Whisper SDP answer sent back to client.")
+#             return PlainTextResponse(content=answer_sdp)
 
-    except httpx.HTTPStatusError as e:
-        logging.error(f"Whisper session error: {e.response.status_code} - {e.response.text}")
-        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
-    except Exception as e:
-        logging.exception("Unexpected error in transcription_proxy")
-        raise HTTPException(status_code=500, detail="Error in /api/transcription-proxy")
+#     except httpx.HTTPStatusError as e:
+#         logging.error(f"Whisper session error: {e.response.status_code} - {e.response.text}")
+#         raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+#     except Exception as e:
+#         logging.exception("Unexpected error in transcription_proxy")
+#         raise HTTPException(status_code=500, detail="Error in /api/transcription-proxy")
 
 
 # --- 2. Function Calling実行用のWebSocketエンドポイント (セキュリティチェックを省略) ---
