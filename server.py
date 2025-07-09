@@ -25,6 +25,16 @@ app.add_middleware(
     allow_headers=["*"],  # すべてのヘッダーを許可
 )
 
+user_response = []
+QUESTION_FILE_PATH = "question_list.txt"
+
+def load_questions():
+    try:
+        with open(QUESTION_FILE_PATH, encoding="utf-8") as f:
+            return [line.strip() for line in f if line.strip()]
+    except FileNotFoundError:
+        return []
+
 # --- Function Callingの仕様定義 ---
 # AIが利用できる関数（ツール）の定義
 # https://note.com/vitaactiva/n/ncee4997bbb63
@@ -156,44 +166,80 @@ FUNCTION_SCHEMAS = {
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     logging.info("WebSocket connection established for function calling.")
+    
+    questions = load_questions()
+    current_index = 0
+    
     try:
         while True:
             data_str = await websocket.receive_text()
             data = json.loads(data_str)
+            
+            msg_type = data.get("type")
+            
+            if msg_type == "function_call":
 
-            call_id = data.get("call_id")
-            function_name = data.get("name")
-            arguments_str = data.get("arguments")
+                call_id = data.get("call_id")
+                function_name = data.get("name")
+                arguments_str = data.get("arguments")
 
-            if function_name in AVAILABLE_FUNCTIONS:
-                try:
-                    arguments = json.loads(arguments_str)
-                    schema = FUNCTION_SCHEMAS[function_name]
-                    validated_args = schema(**arguments)
-                    function_to_call = AVAILABLE_FUNCTIONS[function_name]
-                    result = function_to_call(**validated_args.dict())
+                if function_name in AVAILABLE_FUNCTIONS:
+                    try:
+                        arguments = json.loads(arguments_str)
+                        schema = FUNCTION_SCHEMAS[function_name]
+                        validated_args = schema(**arguments)
+                        function_to_call = AVAILABLE_FUNCTIONS[function_name]
+                        result = function_to_call(**validated_args.dict())
 
+                        await websocket.send_json({
+                            "status": "success",
+                            "call_id": call_id,
+                            "result": result
+                        })
+                        logging.info(f"Successfully executed function '{function_name}' and sent result.")
+
+                    except ValidationError as e:
+                        error_message = f"Invalid arguments for {function_name}: {e}"
+                        logging.error(error_message)
+                        await websocket.send_json({"status": "error", "call_id": call_id, "message": error_message})
+                    except Exception as e:
+                        error_message = f"Function execution failed for {function_name}: {e}"
+                        logging.error(error_message)
+                        await websocket.send_json({"status": "error", "call_id": call_id, "message": error_message})
+                else:
+                    error_message = f"Unknown function requested: {function_name}"
+                    logging.warning(error_message)
+                    await websocket.send_json({"status": "error", "call_id": call_id, "message": error_message})
+            #       
+            elif msg_type == "next_question":
+                if current_index < len(questions):
                     await websocket.send_json({
-                        "status": "success",
-                        "call_id": call_id,
-                        "result": result
+                        "type": "question",
+                        "index": current_index,
+                        "text": questions[current_index]
                     })
-                    logging.info(f"Successfully executed function '{function_name}' and sent result.")
+                    current_index += 1
+                else:
+                    await websocket.send_json({
+                        "type": "end",
+                        "message": "すべての質問が終了しました"
+                    })
 
-                except ValidationError as e:
-                    error_message = f"Invalid arguments for {function_name}: {e}"
-                    logging.error(error_message)
-                    await websocket.send_json({"status": "error", "call_id": call_id, "message": error_message})
-                except Exception as e:
-                    error_message = f"Function execution failed for {function_name}: {e}"
-                    logging.error(error_message)
-                    await websocket.send_json({"status": "error", "call_id": call_id, "message": error_message})
+            elif msg_type == "user_response":
+                user_text = data.get("text", "")
+                index = data.get("index", current_index - 1)
+                user_response.append(user_text)
+                logging.info(f"回答受信: [{index}] {user_text}")
+
             else:
-                error_message = f"Unknown function requested: {function_name}"
-                logging.warning(error_message)
-                await websocket.send_json({"status": "error", "call_id": call_id, "message": error_message})
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Unknown message type: {msg_type}"
+                })
 
     except WebSocketDisconnect:
         logging.info("Client disconnected from WebSocket.")
     except Exception as e:
         logging.error(f"An error occurred in WebSocket: {e}", exc_info=True)
+
+    
