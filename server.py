@@ -162,8 +162,8 @@ async def transcription_proxy(request: Request):
                     "OpenAI-Beta": "realtime=v1",
                 },
                 json={
-                    "model": "whisper-1",
                     "input_audio_transcription": {
+                        "model": "whisper-1",
                         "language": "ja"
                     },
                     "turn_detection": {
