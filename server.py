@@ -6,9 +6,9 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPExcept
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, constr, ValidationError
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 # --- ロギング設定 ---
 logging.basicConfig(
