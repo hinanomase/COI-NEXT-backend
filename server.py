@@ -159,7 +159,7 @@ async def transcription_proxy(request: Request):
                 },
                 json={
                     "input_audio_transcription": {
-                        "model": "whisper-1",
+                        # "model": "whisper-1",
                         "language": "ja"
                     },
                     "turn_detection": {
