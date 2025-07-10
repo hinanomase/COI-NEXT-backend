@@ -6,6 +6,9 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPExcept
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, constr, ValidationError
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # --- ロギング設定 ---
 logging.basicConfig(
@@ -159,7 +162,7 @@ async def transcription_proxy(request: Request):
                 },
                 json={
                     "input_audio_transcription": {
-                        # "model": "whisper-1",
+                        "model": "whisper-1",
                         "language": "ja"
                     },
                     "turn_detection": {
@@ -181,7 +184,7 @@ async def transcription_proxy(request: Request):
 
             # SDP交換
             sdp_resp = await client.post(
-                "https://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-12-17",
+                "https://api.openai.com/v1/realtime",
                 headers={
                     "Authorization": f"Bearer {ephemeral_key}",
                     "Content-Type": "application/sdp",
