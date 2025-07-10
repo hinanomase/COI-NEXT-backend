@@ -158,7 +158,6 @@ async def transcription_proxy(request: Request):
                     "OpenAI-Beta": "realtime=v1",
                 },
                 json={
-                    "object": "realtime.transcription_session",
                     "input_audio_transcription": {
                         "model": "whisper-1",
                         "language": "ja"
