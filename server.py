@@ -159,8 +159,7 @@ async def transcription_proxy(request: Request):
                 },
                 json={
                     "input_audio_transcription": {
-                        # "model": "whisper-1", // whisper-1はエラーになる
-                        "model": "gpt-4o-transcribe",
+                        "model": "whisper-1",
                         "language": "ja"
                     },
                     "turn_detection": {
@@ -182,7 +181,7 @@ async def transcription_proxy(request: Request):
 
             # SDP交換
             sdp_resp = await client.post(
-                "https://api.openai.com/v1/realtime?model=whisper-1",
+                "https://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-12-17",
                 headers={
                     "Authorization": f"Bearer {ephemeral_key}",
                     "Content-Type": "application/sdp",
