@@ -159,7 +159,8 @@ async def transcription_proxy(request: Request):
                 },
                 json={
                     "input_audio_transcription": {
-                        "model": "whisper-1",
+                        # "model": "whisper-1", // whisper-1はエラーになる
+                        "model": "gpt-4o-transcribe",
                         "language": "ja"
                     },
                     "turn_detection": {
