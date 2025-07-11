@@ -214,6 +214,7 @@ async def transcription_proxy(request: Request):
 
 # --- 2. Function Calling実行用のWebSocketエンドポイント (セキュリティチェックを省略) ---
 
+
 def appRAG(search_query: str) -> str:
     logging.info(f"Executing appRAG for: {search_query}")
     # return f"「{search_query}」に関する質問は、データベースが未実装のため回答できません。"
