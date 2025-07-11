@@ -6,9 +6,9 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPExcept
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, constr, ValidationError
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 
-# load_dotenv()
+load_dotenv()
 
 # --- ロギング設定 ---
 logging.basicConfig(
@@ -30,6 +30,12 @@ app.add_middleware(
 
 user_response = []
 QUESTION_FILE_PATH = "question_list.txt"
+
+conversation_state = {
+    "current_index": 0,   # 今の質問番号
+    "responses": []       # 回答の履歴
+}
+
 
 def load_questions():
     try:
@@ -213,16 +219,46 @@ def appRAG(search_query: str) -> str:
     # return f"「{search_query}」に関する質問は、データベースが未実装のため回答できません。"
     return f"営業時間は午前9時から午後10時までです。"
 
+def store_user_response(text: str) -> dict:
+    """ユーザー回答を保存し、保存済みの質問番号を返す"""
+    idx = max(conversation_state["current_index"] - 1, 0)
+    conversation_state["responses"].append({"index": idx, "text": text})
+    return {"status": "stored", "question_index": idx}
+
+def get_next_question() -> dict:
+    """次の質問を返す。なければ終了メッセージ"""
+    questions = load_questions()
+    i = conversation_state["current_index"]
+    if i < len(questions):
+        q = questions[i]
+        conversation_state["current_index"] += 1
+        return {"index": i, "text": q}
+    else:
+        return {"type": "end", "message": "すべての質問が終了しました"}
+
+
 # --- Pydanticモデルによる入力検証 ---
 class AppRagArgs(BaseModel):
     search_query: constr(max_length=200)
 
+class StoreUserResponseArgs(BaseModel):
+    text: constr(max_length=1000)
+
+class GetNextQuestionArgs(BaseModel):
+    pass  # 引数なし
+
+
 # --- 関数ディスパッチャ ---
 AVAILABLE_FUNCTIONS = {
-    "appRAG": appRAG
+    "appRAG": appRAG,
+    "store_user_response": store_user_response,
+    "get_next_question": get_next_question,
 }
+
 FUNCTION_SCHEMAS = {
-    "appRAG": AppRagArgs
+    "appRAG": AppRagArgs,
+    "store_user_response": StoreUserResponseArgs,
+    "get_next_question": GetNextQuestionArgs,
 }
 
 @app.websocket("/ws/function-call")
@@ -304,5 +340,6 @@ async def websocket_endpoint(websocket: WebSocket):
         logging.info("Client disconnected from WebSocket.")
     except Exception as e:
         logging.error(f"An error occurred in WebSocket: {e}", exc_info=True)
+        
 
     
