@@ -1,3 +1,4 @@
 .env
 HealthAdvice.csv
 __pycache__/
+question_list.txt
